@@ -1,0 +1,12 @@
+{
+	// Tells `wrangler deploy` to serve the static SvelteKit build (adapter-static
+	// output in ./build) as static assets — no Worker script, no adapter swap.
+	// SPA fallback serves index.html for client-side routes like /login, /game.
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "pubcrawl",
+	"compatibility_date": "2026-06-14",
+	"assets": {
+		"directory": "build",
+		"not_found_handling": "single-page-application"
+	}
+}
