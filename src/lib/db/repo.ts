@@ -92,11 +92,17 @@ export function createSupabaseRepo(sb: SupabaseClient): GameRepo {
 				.maybeSingle();
 			if (error) throw error;
 
-			// Empty project → seed it with the default data and return that.
+			// First run on an empty project: write only the seed config. NEVER wipe
+			// answers/accounts here — seeding must not destroy data that already
+			// exists (a full reset is an explicit action: resetAll).
+			let config: ConfigData;
 			if (!cfgRow) {
 				const seed = clone(initialState);
-				await resetAll(seed);
-				return seed;
+				await saveConfig(seed);
+				const { answers: _seedA, accounts: _seedB, ...cfg } = seed;
+				config = cfg;
+			} else {
+				config = cfgRow.data as ConfigData;
 			}
 
 			const [{ data: answerRows }, { data: accountRows }] = await Promise.all([
@@ -124,7 +130,6 @@ export function createSupabaseRepo(sb: SupabaseClient): GameRepo {
 				}
 			}
 
-			const config = cfgRow.data as ConfigData;
 			return {
 				...config,
 				answers: (answerRows ?? []).map(fromAnswerRow),
