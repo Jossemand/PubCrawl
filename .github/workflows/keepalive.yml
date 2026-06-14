@@ -1,0 +1,23 @@
+# Keeps the free Supabase project from pausing after 7 days of inactivity by
+# pinging it every 3 days. Add two repository secrets (Settings → Secrets and
+# variables → Actions):
+#   SUPABASE_URL       e.g. https://abcdxyz.supabase.co
+#   SUPABASE_ANON_KEY  the anon public key
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '0 6 */3 * *' # every 3 days at 06:00 UTC
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the database
+        run: |
+          curl -fsS \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/game_config?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            && echo "Supabase pinged OK"

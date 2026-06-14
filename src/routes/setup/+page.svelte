@@ -8,7 +8,11 @@
 		accountForContestant,
 		setContestantHiddenQuestions,
 		answerFor,
-		deleteAnswer
+		deleteAnswer,
+		syncConfigChanges,
+		cleanupContestant,
+		resetEverything,
+		replaceState
 	} from '$lib/stores';
 	import { config } from '$lib/config';
 	import type { AnimalMode, GameState } from '$lib/types';
@@ -31,6 +35,7 @@
 			}
 			return s;
 		});
+		syncConfigChanges();
 	}
 	function setAnimalMode(id: string, mode: AnimalMode) {
 		game.update((s) => {
@@ -38,6 +43,7 @@
 			if (q) q.animalMode = mode;
 			return s;
 		});
+		syncConfigChanges();
 	}
 	function setAnimal(id: string, animal: string) {
 		game.update((s) => {
@@ -45,6 +51,7 @@
 			if (q) q.animal = animal;
 			return s;
 		});
+		syncConfigChanges();
 	}
 	function setSeconds(id: string, value: string) {
 		game.update((s) => {
@@ -55,6 +62,7 @@
 			}
 			return s;
 		});
+		syncConfigChanges();
 	}
 
 	let loginsText = $derived(
@@ -62,7 +70,7 @@
 			.map((c) => {
 				const a = accountForContestant($game, c.id);
 				return a
-					? `${c.name}: brugernavn "${a.username}", kode "${a.password}"`
+					? `${c.name}: brugernavn "${a.username}", kode "${a.password || a.username}"`
 					: `${c.name}: (intet login endnu)`;
 			})
 			.join('\n')
@@ -103,6 +111,7 @@
 			if (t) t[field] = value;
 			return s;
 		});
+		syncConfigChanges();
 	}
 
 	// ---- Contestants ----
@@ -111,6 +120,7 @@
 			s.contestants.push({ id: uid('c'), name: 'Ny deltager', teamId: s.teams[0]?.id ?? '' });
 			return s;
 		});
+		syncConfigChanges();
 	}
 	function setContestant(id: string, field: 'name' | 'teamId', value: string) {
 		game.update((s) => {
@@ -118,6 +128,7 @@
 			if (c) (c[field] as string) = value;
 			return s;
 		});
+		syncConfigChanges();
 	}
 	function removeContestant(id: string) {
 		game.update((s) => {
@@ -126,6 +137,7 @@
 			s.tasks = s.tasks.filter((t) => t.contestantId !== id);
 			return s;
 		});
+		cleanupContestant(id); // syncs config + removes their answers/login from the backend
 	}
 
 	// ---- Questions ----
@@ -134,6 +146,7 @@
 			s.questions.push({ id: uid('q'), text: 'Nyt spørgsmål?' });
 			return s;
 		});
+		syncConfigChanges();
 	}
 	function setQuestion(id: string, text: string) {
 		game.update((s) => {
@@ -141,6 +154,7 @@
 			if (q) q.text = text;
 			return s;
 		});
+		syncConfigChanges();
 	}
 	function removeQuestion(id: string) {
 		game.update((s) => {
@@ -148,6 +162,7 @@
 			s.answers = s.answers.filter((a) => a.questionId !== id);
 			return s;
 		});
+		syncConfigChanges();
 	}
 
 	// ---- Tasks ----
@@ -162,6 +177,7 @@
 			});
 			return s;
 		});
+		syncConfigChanges();
 	}
 	function setTask(id: string, field: 'description' | 'contestantId' | 'points', value: string) {
 		game.update((s) => {
@@ -172,18 +188,20 @@
 			else t.description = value;
 			return s;
 		});
+		syncConfigChanges();
 	}
 	function removeTask(id: string) {
 		game.update((s) => {
 			s.tasks = s.tasks.filter((t) => t.id !== id);
 			return s;
 		});
+		syncConfigChanges();
 	}
 
 	// ---- Danger zone ----
 	let confirmingReset = $state(false);
 	function reset() {
-		game.reset();
+		resetEverything();
 		confirmingReset = false;
 	}
 	function clearRounds() {
@@ -192,6 +210,7 @@
 			s.bonus = Object.fromEntries(s.teams.map((t) => [t.id, 0]));
 			return s;
 		});
+		syncConfigChanges();
 	}
 
 	// ---- Export / import ----
@@ -214,7 +233,7 @@
 			if (!parsed.teams || !parsed.contestants || !parsed.questions) {
 				throw new Error('Mangler påkrævede felter (hold/deltagere/spørgsmål).');
 			}
-			game.set(parsed);
+			replaceState(parsed);
 			importText = '';
 		} catch (e) {
 			importError = e instanceof Error ? e.message : 'Ugyldig JSON.';
@@ -369,8 +388,8 @@
 				<span class="who">{c.name}</span>
 				{#if acc}
 					<code class="cred">{acc.username}</code>
-					<code class="cred">{acc.password}</code>
-					<button class="ghost sm" onclick={() => copy(`${acc.username} / ${acc.password}`, c.id)}>
+					<code class="cred">{acc.password || acc.username}</code>
+					<button class="ghost sm" onclick={() => copy(`${acc.username} / ${acc.password || acc.username}`, c.id)}>
 						{copied === c.id ? '✓' : 'Kopiér'}
 					</button>
 					<button class="ghost sm" onclick={() => resetContestantPassword(c.id)} title="Nyt kodeord">↻</button>

@@ -49,6 +49,16 @@ src/
 - **Pointgivning** — rediger `src/lib/config.ts` (`pointsPerCorrectMatch`, `perfectRoundBonus`).
 - **Hold / deltagere / spørgsmål / opgaver** — rediger dem live i **Opsætning**-skærmen, eller ret startdata i `src/lib/mockData.ts`. Opsætning kan også **eksportere/importere** hele spillet som JSON (praktisk til at flytte data mellem enheder, indtil storage er sat op).
 
-## Storage senere
+## Storage / backend (Supabase)
 
-Når du er klar til at lægge svarene på en server, implementerer du en ny `StorageBackend` i `src/lib/storage.ts` (fx `fetch` til din hjemmeserver eller en gratis hosted API) og peger den eksporterede `storage` derhen. Intet andet skal ændres.
+Appen kan køre på en gratis **Supabase**-backend (Postgres + login), så vennerne
+kan bruge den fra deres egne telefoner på et rigtigt domæne. Uden miljøvariabler
+kører appen videre på `localStorage` (offline) — den skifter automatisk til
+Supabase, når `PUBLIC_SUPABASE_URL` og `PUBLIC_SUPABASE_ANON_KEY` er sat.
+
+Se **[SUPABASE_SETUP.md](SUPABASE_SETUP.md)** for trin-for-trin opsætning
+(opret projekt, kør `supabase/schema.sql`, deploy til Cloudflare Pages, hold-i-live cron).
+
+Kort om datalaget: [src/lib/db/repo.ts](src/lib/db/repo.ts) håndterer CRUD mod
+Supabase, og [src/lib/stores.ts](src/lib/stores.ts) kalder det ved hver ændring.
+Vil du bruge en helt anden backend, kan du erstatte `repo.ts` bag samme interface.

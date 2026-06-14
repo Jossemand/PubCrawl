@@ -3,7 +3,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { config } from '$lib/config';
-	import { session } from '$lib/stores';
+	import { session, ready } from '$lib/stores';
 
 	let { children } = $props();
 
@@ -71,7 +71,9 @@
 	{/if}
 
 	<main>
-		{#if allowed}
+		{#if !$ready}
+			<p class="muted" style="padding:2rem 0">Indlæser data…</p>
+		{:else if allowed}
 			{@render children()}
 		{/if}
 	</main>

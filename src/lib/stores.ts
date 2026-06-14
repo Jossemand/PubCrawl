@@ -8,7 +8,9 @@ import { config } from './config';
 import { storage } from './storage';
 import { initialState } from './mockData';
 import { authenticate, usernameFromName, type Session } from './auth';
-import type { Contestant, GameState, ID, Question, RoundResult, RoundType, Team } from './types';
+import { supabase, supabaseConfigured } from './db/supabaseClient';
+import { createSupabaseRepo, type GameRepo } from './db/repo';
+import type { Account, Contestant, GameState, ID, Question, RoundResult, RoundType, Team } from './types';
 
 function randomPrompt(): string {
 	const list = config.drawingPrompts;
@@ -67,6 +69,38 @@ function createGameStore() {
 }
 
 export const game = createGameStore();
+
+// ---- Backend (Supabase) -------------------------------------------------
+// `repo` is null unless Supabase env vars are set, in which case the app runs
+// purely on localStorage (current behaviour). When present, reads load from
+// Supabase on startup and writes are mirrored there.
+
+const repo: GameRepo | null = browser && supabaseConfigured && supabase ? createSupabaseRepo(supabase) : null;
+
+export const usingSupabase = !!repo;
+/** False while the initial Supabase load is in flight; always true in local mode. */
+export const ready = writable<boolean>(!repo);
+
+if (repo) {
+	repo
+		.loadAll()
+		.then((state) => game.set(normalize(state)))
+		.catch((e) => console.error('[supabase] initial load failed, using local cache:', e))
+		.finally(() => ready.set(true));
+}
+
+function logErr(label: string) {
+	return (e: unknown) => console.error(`[supabase] ${label} failed:`, e);
+}
+
+/** Push the whole config blob (taskmaster-written data) to Supabase. */
+function syncConfig() {
+	repo?.saveConfig(get(game)).catch(logErr('saveConfig'));
+}
+
+function findAnswer(state: GameState, questionId: ID, contestantId: ID) {
+	return state.answers.find((a) => a.questionId === questionId && a.contestantId === contestantId);
+}
 
 // ---- Read helpers -------------------------------------------------------
 
@@ -178,9 +212,7 @@ export const scoreboard = derived(game, ($game): TeamScore[] => {
 
 export function saveAnswer(questionId: ID, contestantId: ID, value: string) {
 	game.update((state) => {
-		const existing = state.answers.find(
-			(a) => a.questionId === questionId && a.contestantId === contestantId
-		);
+		const existing = findAnswer(state, questionId, contestantId);
 		if (existing) {
 			existing.value = value;
 		} else {
@@ -188,6 +220,8 @@ export function saveAnswer(questionId: ID, contestantId: ID, value: string) {
 		}
 		return state;
 	});
+	const ans = findAnswer(get(game), questionId, contestantId);
+	if (ans) repo?.upsertAnswer(ans).catch(logErr('upsertAnswer'));
 }
 
 /**
@@ -209,6 +243,8 @@ export function startDrawing(questionId: ID, contestantId: ID): string {
 		assigned = ans.animal ?? '';
 		return state;
 	});
+	const ans = findAnswer(get(game), questionId, contestantId);
+	if (ans) repo?.upsertAnswer(ans).catch(logErr('upsertAnswer'));
 	return assigned;
 }
 
@@ -224,6 +260,7 @@ export function deleteAnswer(questionId: ID, contestantId: ID) {
 		);
 		return state;
 	});
+	repo?.deleteAnswer(questionId, contestantId).catch(logErr('deleteAnswer'));
 }
 
 /** Save a finished drawing (PNG data URL) and lock it. */
@@ -238,6 +275,8 @@ export function saveDrawing(questionId: ID, contestantId: ID, dataUrl: string) {
 		ans.locked = true;
 		return state;
 	});
+	const ans = findAnswer(get(game), questionId, contestantId);
+	if (ans) repo?.upsertAnswer(ans).catch(logErr('upsertAnswer'));
 }
 
 /** Save (or overwrite) your mom's ranking for a fixed drawing question. */
@@ -248,6 +287,7 @@ export function setRating(questionId: ID, podium: ID[]) {
 		else state.ratings.push({ questionId, podium });
 		return state;
 	});
+	syncConfig();
 }
 
 export function recordRound(result: Omit<RoundResult, 'id'>) {
@@ -258,6 +298,7 @@ export function recordRound(result: Omit<RoundResult, 'id'>) {
 		});
 		return state;
 	});
+	syncConfig();
 }
 
 export function toggleTask(taskId: ID) {
@@ -266,6 +307,7 @@ export function toggleTask(taskId: ID) {
 		if (task) task.completed = !task.completed;
 		return state;
 	});
+	syncConfig();
 }
 
 export function adjustBonus(teamId: ID, delta: number) {
@@ -273,11 +315,33 @@ export function adjustBonus(teamId: ID, delta: number) {
 		state.bonus[teamId] = (state.bonus[teamId] ?? 0) + delta;
 		return state;
 	});
+	syncConfig();
 }
 
-/** Replace the whole state (used by the setup editor). */
+/** Persist arbitrary config edits made directly on the store (used by Setup). */
+export function syncConfigChanges() {
+	syncConfig();
+}
+
+/** Remove a contestant's answers + login from the backend (after local removal). */
+export function cleanupContestant(contestantId: ID) {
+	syncConfig();
+	repo?.deleteAnswersForContestant(contestantId).catch(logErr('deleteAnswersForContestant'));
+	repo?.deleteAccountForContestant(contestantId).catch(logErr('deleteAccountForContestant'));
+}
+
+/** Replace the whole state (used by the setup import). */
 export function replaceState(next: GameState) {
-	game.set(next);
+	const normalized = normalize(next);
+	game.set(normalized);
+	repo?.resetAll(normalized).catch(logErr('resetAll'));
+}
+
+/** Wipe everything back to the seed data (Setup → Nulstil alt). */
+export function resetEverything() {
+	const seed = clone(initialState);
+	game.set(seed);
+	repo?.resetAll(seed).catch(logErr('resetAll'));
 }
 
 export function currentState() {
@@ -294,9 +358,17 @@ function createSessionStore() {
 	}
 	return {
 		subscribe: store.subscribe,
-		/** Returns true on success. */
-		login(username: string, password: string): boolean {
-			const sess = authenticate(get(game), username, password);
+		/**
+		 * Returns true on success. Uses the Supabase `login` RPC when configured
+		 * (passwords never reach the browser); otherwise checks local accounts.
+		 */
+		async login(username: string, password: string): Promise<boolean> {
+			const sess = repo
+				? await repo.login(username, password).catch((e) => {
+						console.error('[supabase] login failed:', e);
+						return null;
+					})
+				: authenticate(get(game), username, password);
 			if (sess) {
 				store.set(sess);
 				return true;
@@ -313,50 +385,65 @@ export const session = createSessionStore();
 
 // ---- Account management (admin) -----------------------------------------
 
+function pushAccount(account: Account) {
+	repo?.upsertAccount(account).catch(logErr('upsertAccount'));
+}
+
 /** Update the taskmaster's own login. */
 export function setAdminCredentials(username: string, password: string) {
+	let admin: Account | undefined;
 	game.update((state) => {
-		const admin = state.accounts.find((a) => a.role === 'admin');
+		admin = state.accounts.find((a) => a.role === 'admin');
 		if (admin) {
 			admin.username = username;
 			admin.password = password;
 		} else {
-			state.accounts.push({ username, password, role: 'admin' });
+			admin = { username, password, role: 'admin' };
+			state.accounts.push(admin);
 		}
 		return state;
 	});
+	if (admin) pushAccount(admin);
 }
 
 /** Create a login for every contestant that doesn't have one yet. Password = username. */
 export function generateMissingLogins() {
+	const created: Account[] = [];
 	game.update((state) => {
 		const taken = new Set(state.accounts.map((a) => a.username.toLowerCase()));
 		for (const c of state.contestants) {
 			if (state.accounts.some((a) => a.role === 'contestant' && a.contestantId === c.id)) continue;
 			const username = usernameFromName(c.name, taken);
 			taken.add(username);
-			state.accounts.push({ username, password: username, role: 'contestant', contestantId: c.id });
+			const acc: Account = { username, password: username, role: 'contestant', contestantId: c.id };
+			state.accounts.push(acc);
+			created.push(acc);
 		}
 		return state;
 	});
+	created.forEach(pushAccount);
 }
 
 /** (Re)create one contestant's login. Password is kept equal to the username. */
 export function resetContestantPassword(contestantId: ID) {
+	let changed: Account | undefined;
 	game.update((state) => {
 		const taken = new Set(state.accounts.map((a) => a.username.toLowerCase()));
 		const existing = state.accounts.find((a) => a.role === 'contestant' && a.contestantId === contestantId);
 		if (existing) {
 			existing.password = existing.username;
+			changed = existing;
 		} else {
 			const c = state.contestants.find((c) => c.id === contestantId);
 			if (c) {
 				const username = usernameFromName(c.name, taken);
-				state.accounts.push({ username, password: username, role: 'contestant', contestantId });
+				changed = { username, password: username, role: 'contestant', contestantId };
+				state.accounts.push(changed);
 			}
 		}
 		return state;
 	});
+	if (changed) pushAccount(changed);
 }
 
 export function setContestantHiddenQuestions(contestantId: ID, hiddenQuestionIds: ID[]) {
@@ -365,4 +452,5 @@ export function setContestantHiddenQuestions(contestantId: ID, hiddenQuestionIds
 		if (c) c.hiddenQuestionIds = hiddenQuestionIds;
 		return state;
 	});
+	syncConfig();
 }

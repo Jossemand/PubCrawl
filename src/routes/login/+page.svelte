@@ -8,10 +8,15 @@
 	let password = $state('');
 	let error = $state('');
 
-	function submit(e: SubmitEvent) {
+	let busy = $state(false);
+
+	async function submit(e: SubmitEvent) {
 		e.preventDefault();
 		error = '';
-		if (session.login(username, password)) {
+		busy = true;
+		const ok = await session.login(username, password);
+		busy = false;
+		if (ok) {
 			// Redirect handled here; the layout guard also enforces it.
 			goto('/');
 		} else {
@@ -37,7 +42,9 @@
 
 		{#if error}<p class="err">{error}</p>{/if}
 
-		<button type="submit" disabled={!username.trim() || !password}>Log ind</button>
+		<button type="submit" disabled={busy || !username.trim() || !password}>
+			{busy ? 'Logger ind…' : 'Log ind'}
+		</button>
 	</form>
 </div>
 
