@@ -274,14 +274,15 @@ textarea {
 	color: #fff;
 }
 
-/* A progress track — used by the timeline and the quiz. */
-.bar {
+/* A progress track — used by the timeline, the quiz and the front page.
+   Deliberately NOT called .bar: that collided with the drawing pad's toolbar. */
+.progress {
 	height: 7px;
 	border-radius: 999px;
 	background: var(--bg-sunken);
 	overflow: hidden;
 }
-.bar > span {
+.progress > span {
 	display: block;
 	height: 100%;
 	border-radius: 999px;

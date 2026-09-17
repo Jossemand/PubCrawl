@@ -1,5 +1,5 @@
 <script lang="ts">
-	// A one-shot drawing pad: click Start → the animal is revealed and a timed
+	// A one-shot drawing pad: click Start → the motif is revealed and a timed
 	// canvas opens. When the timer hits 0 (or "Færdig" is pressed) it captures the
 	// drawing as a PNG data URL and hands it back via onfinish. The parent then
 	// swaps this out for the saved image, so there's no "locked" state here.
@@ -10,7 +10,7 @@
 		onfinish
 	}: {
 		seconds?: number;
-		/** Called when drawing starts; returns the animal to draw. */
+		/** Called when drawing starts; returns the motif to draw. */
 		onstart: () => string;
 		onfinish: (dataUrl: string) => void;
 	} = $props();
@@ -116,7 +116,7 @@
 		</div>
 	</div>
 {:else if started}
-	<div class="bar">
+	<div class="toolbar">
 		<span class="time" class:warn={remaining <= 10}>⏳ {remaining}s</span>
 		<span class="animal">Tegn: <b>{animal}</b></span>
 	</div>
@@ -136,7 +136,7 @@
 {/if}
 
 <style>
-	.bar {
+	.toolbar {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;

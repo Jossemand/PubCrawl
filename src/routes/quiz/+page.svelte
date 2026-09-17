@@ -49,7 +49,7 @@
 					<span class="muted lbl">udfyldt</span>
 				</div>
 			</div>
-			<div class="bar"><span style="width:{pct}%"></span></div>
+			<div class="progress"><span style="width:{pct}%"></span></div>
 			<p class="hint">
 				Svar ærligt — dine svar er skjulte for alle andre. På turen skal det modsatte hold gætte,
 				hvem der skrev hvad. Alt gemmes automatisk, og du kan rette til lige indtil vi går i byen.

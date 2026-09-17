@@ -2,6 +2,7 @@
 // Erstat navne/spørgsmål/opgaver via /setup-skærmen eller ved at rette her.
 
 import type { GameState } from './types';
+import { config } from './config';
 
 export const initialState: GameState = {
 	teams: [
@@ -19,16 +20,29 @@ export const initialState: GameState = {
 		{ id: 'c7', name: 'Andreas', teamId: 'team-b' },
 	],
 
+	// Spørgsmålene. De er skruet til en vennegruppe, der har kendt hinanden
+	// længe nok til at kunne tage det — svarene skal helst kunne spores tilbage
+	// til én bestemt person, ellers er der ikke meget at gætte på.
+	// Skru op, ned eller ud i Opsætning; ingen af dem er hellige.
 	questions: [
-		{ id: 'q1', text: 'Hvad er din mest pinlige fulde-historie i én sætning?' },
-		{ id: 'q2', text: 'Hvis du skulle opgive én for altid: øl eller kaffe?' },
-		{ id: 'q3', text: 'Hvad er en mærkeligt specifik frygt, du har?' },
-		{ id: 'q4', text: 'Beskriv din drømmebar med tre ord.' },
-		{ id: 'q5', text: 'Hvilken sang får dig altid ud på dansegulvet?' },
-		// Mor bedømmer: alle tegner det samme (simple) dyr — kun 15 sekunder!
-		{ id: 'q6', text: 'Tegn dette dyr — mor kårer de bedste! (15 sek)', kind: 'drawing', animalMode: 'fixed', animal: 'Elefant', seconds: 15 },
-		// De andre gætter: hver deltager får et tilfældigt (svært) motiv — 60 sekunder.
-		{ id: 'q7', text: 'Tegn dit hemmelige motiv — det andet hold skal gætte det! (60 sek)', kind: 'drawing', animalMode: 'random', seconds: 60 }
+		{ id: 'q1', text: 'Hvad er det værste, du har gjort mod en i denne vennegruppe — som han aldrig har opdaget?' },
+		{ id: 'q2', text: 'Hvilken løgn har du fortalt gruppen, som stadig står uimodsagt den dag i dag?' },
+		{ id: 'q3', text: 'Hvem i gruppen har du talt mest lort om bag ryggen — og hvad handlede det om?' },
+		{ id: 'q4', text: 'Hvilken af dine egne klassiske historier er pyntet mest? Fortæl den rigtige version.' },
+		{ id: 'q5', text: 'Hvad er det mest patetiske, du har gjort for at imponere en, du var vild med?' },
+		{ id: 'q6', text: 'Hvad er det tætteste, du har været på at blive anholdt?' },
+		{ id: 'q7', text: 'Hvad er den dyreste beslutning, du har truffet efter klokken 02?' },
+		{ id: 'q8', text: 'Hvis vi fik din telefon i fem minutter, hvad ville koste dig mest?' },
+		{ id: 'q9', text: 'Hvem i gruppen ville klare sig dårligst i fængsel — og hvor længe holder han?' },
+		{ id: 'q10', text: 'Hvilket af de andres forhold gav du mindre end et år? Fik du ret?' },
+		{ id: 'q11', text: 'Hvad ville din værste ekskæreste svare, hvis vi ringede til hende i aften og spurgte, hvordan du var?' },
+		{ id: 'q12', text: 'Hvad var dit absolutte lavpunkt i 20\'erne? Én sætning, ingen undskyldninger.' },
+		{ id: 'q13', text: 'Hvem i gruppen har toppet — og hvem har stadig sit bedste til gode?' },
+		{ id: 'q14', text: 'Hvad er det mest upassende, du har grinet højt af?' },
+		// Mor bedømmer: alle tegner det samme (simple) motiv — kun 15 sekunder!
+		{ id: 'q15', text: 'Tegn dette motiv — mor kårer de bedste! (15 sek)', kind: 'drawing', animalMode: 'fixed', animal: config.fixedMotif, seconds: 15 },
+		// De andre gætter: hver deltager får sit eget (svære) motiv — 60 sekunder.
+		{ id: 'q16', text: 'Tegn dit hemmelige motiv — det andet hold skal gætte det! (60 sek)', kind: 'drawing', animalMode: 'random', seconds: 60 }
 	],
 
 	// Ingen svar endnu — disse udfyldes i quiz-fasen.

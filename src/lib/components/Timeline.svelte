@@ -56,7 +56,7 @@
 						{#if step.status === 'now'}
 							<span class="blurb">{step.blurb}</span>
 							{#if step.progress && step.progress.total > 0}
-								<span class="bar">
+								<span class="progress">
 									<span style="width:{(step.progress.done / step.progress.total) * 100}%"></span>
 								</span>
 							{/if}
@@ -213,7 +213,7 @@
 		line-height: 1.4;
 	}
 
-	.bar {
+	.progress {
 		display: block;
 		height: 5px;
 		margin-top: 0.3rem;
@@ -221,7 +221,7 @@
 		background: var(--bg-sunken);
 		overflow: hidden;
 	}
-	.bar > :global(span) {
+	.progress > :global(span) {
 		display: block;
 		height: 100%;
 		background: var(--accent);
@@ -284,7 +284,7 @@
 		.timeline:not(.forced-vertical) .todo .title {
 			opacity: 0.75;
 		}
-		.timeline:not(.forced-vertical) .bar {
+		.timeline:not(.forced-vertical) .progress {
 			display: none;
 		}
 	}

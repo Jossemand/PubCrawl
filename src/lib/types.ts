@@ -38,13 +38,17 @@ export interface Account {
 	contestantId?: ID; // set for role === 'contestant'
 }
 
-/** 'text' = a written answer; 'drawing' = draw an animal on a canvas. */
+/** 'text' = a written answer; 'drawing' = draw a given motif on a canvas. */
 export type QuestionKind = 'text' | 'drawing';
 
 /**
  * For drawing questions:
- * - 'fixed'  — everyone draws the SAME animal (`animal`); your mom ranks them.
- * - 'random' — each contestant gets a random animal; the other team guesses it.
+ * - 'fixed'  — everyone draws the SAME motif (`animal`); your mom ranks them.
+ * - 'random' — each contestant gets a random motif; the other team guesses it.
+ *
+ * NOTE: the fields are still called `animal`/`animalMode` because they are
+ * carried by the stored game state and the `answers.animal` database column.
+ * A motif is any prompt now — a scene, a feeling, a person — not just animals.
  */
 export type AnimalMode = 'fixed' | 'random';
 
@@ -53,7 +57,7 @@ export interface Question {
 	text: string;
 	kind?: QuestionKind; // undefined = 'text'
 	animalMode?: AnimalMode; // drawing questions only
-	animal?: string; // the fixed animal everyone draws (animalMode === 'fixed')
+	animal?: string; // the fixed motif everyone draws (animalMode === 'fixed')
 	seconds?: number; // drawing timer override (defaults to config.drawingSeconds)
 }
 
@@ -63,7 +67,7 @@ export interface Answer {
 	contestantId: ID;
 	/** Text answer, or a PNG data URL for drawing questions. */
 	value: string;
-	/** The animal this contestant was asked to draw (drawing questions). */
+	/** The motif this contestant was asked to draw (drawing questions). */
 	animal?: string;
 	/** True once a drawing's timer ran out / was submitted (no more edits). */
 	locked?: boolean;

@@ -12,9 +12,12 @@ import { supabase, supabaseConfigured } from './db/supabaseClient';
 import { createSupabaseRepo, type GameRepo } from './db/repo';
 import type { Account, Contestant, GameState, ID, Question, RoundResult, RoundType, Team } from './types';
 
-function randomPrompt(): string {
-	const list = config.drawingPrompts;
-	return list[Math.floor(Math.random() * list.length)] ?? '';
+/**
+ * The 60-second motif this player is pinned to (config.randomMotifs).
+ * Empty string when nobody has assigned them one yet.
+ */
+export function motifFor(contestantId: ID): string {
+	return config.randomMotifs.find((m) => m.contestantId === contestantId)?.motif ?? '';
 }
 
 function clone<T>(value: T): T {
@@ -257,9 +260,10 @@ export function saveAnswer(questionId: ID, contestantId: ID, value: string) {
 }
 
 /**
- * Begin a drawing: ensure an answer row exists and assign the animal to draw.
- * Fixed-mode questions use the question's animal; random-mode keeps a stable
- * per-contestant animal once assigned (so it can't be re-rolled). Returns it.
+ * Begin a drawing: ensure an answer row exists and assign the motif to draw.
+ * Fixed-mode questions use the question's own motif; random-mode looks up the
+ * player's pinned motif, so it is the same every time and you know in advance
+ * who is drawing what. Returns the motif.
  */
 export function startDrawing(questionId: ID, contestantId: ID): string {
 	let assigned = '';
@@ -271,7 +275,10 @@ export function startDrawing(questionId: ID, contestantId: ID): string {
 			state.answers.push(ans);
 		}
 		if (q?.animalMode === 'fixed') ans.animal = q.animal ?? '';
-		else if (!ans.animal) ans.animal = randomPrompt();
+		// Re-read the assignment every time it's opened, so fixing a typo in
+		// config still reaches a player who hasn't drawn yet. A locked drawing
+		// never gets here — the quiz shows the finished picture instead.
+		else ans.animal = motifFor(contestantId) || ans.animal || '';
 		assigned = ans.animal ?? '';
 		return state;
 	});

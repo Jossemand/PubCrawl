@@ -8,6 +8,7 @@
 		accountForContestant,
 		setContestantHiddenQuestions,
 		answerFor,
+		motifFor,
 		deleteAnswer,
 		syncConfigChanges,
 		cleanupContestant,
@@ -309,14 +310,14 @@
 							value={q.animalMode ?? 'random'}
 							onchange={(e) => setAnimalMode(q.id, e.currentTarget.value as AnimalMode)}
 						>
-							<option value="random">Tilfældigt dyr (gæt)</option>
-							<option value="fixed">Fast dyr (mor bedømmer)</option>
+							<option value="random">Tilfældigt motiv (gæt)</option>
+							<option value="fixed">Fast motiv (mor bedømmer)</option>
 						</select>
 						{#if q.animalMode === 'fixed'}
 							<input
-								style="max-width:160px"
-								list="animal-list"
-								placeholder="Dyr, fx Elefant"
+								style="max-width:200px"
+								placeholder="Motiv, fx {config.fixedMotif}"
+								title="Alle tegner dette ene motiv"
 								value={q.animal ?? ''}
 								oninput={(e) => setAnimal(q.id, e.currentTarget.value)}
 							/>
@@ -334,9 +335,6 @@
 				</div>
 			</div>
 		{/each}
-		<datalist id="animal-list">
-			{#each config.animals as a (a)}<option value={a}></option>{/each}
-		</datalist>
 	</div>
 
 	<div class="card">
@@ -460,8 +458,17 @@
 						{:else}
 							<button class="ghost sm" onclick={() => (confirmUnlock = key)}>Lås op</button>
 						{/if}
-					{:else}
+					{:else if q.animalMode === 'fixed'}
 						<span class="muted">ikke tegnet endnu · canvas er åben</span>
+					{:else}
+						<!-- Random-mode motifs are pinned per player in config.ts, so you
+						     can see who draws what long before anyone opens the canvas. -->
+						{@const planned = motifFor(c.id)}
+						{#if planned}
+							<span class="muted">skal tegne: <b>{planned}</b></span>
+						{:else}
+							<span class="warn">⚠️ intet motiv tildelt — tilføj en linje i config.ts</span>
+						{/if}
 					{/if}
 				</div>
 			{/each}
@@ -504,6 +511,10 @@
 	.page-head p {
 		margin: 0;
 		max-width: 60ch;
+	}
+	.warn {
+		color: var(--highlight);
+		font-size: 0.85rem;
 	}
 	.qblock {
 		border-top: 1px solid var(--border);

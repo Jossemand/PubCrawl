@@ -25,8 +25,8 @@
 		{ id: 'match', label: 'Match alle svar', hint: 'Det gættende hold matcher alle svar til de rigtige personer. Scores automatisk.' },
 		{ id: 'who', label: 'Hvem svarede dette?', hint: 'Ét svar ad gangen — gæt hvem der skrev det. Du dømmer rigtigt/forkert.' },
 		{ id: 'what', label: 'Hvad svarede personen?', hint: 'Én person ad gangen — gæt hvad de svarede. Du dømmer rigtigt/forkert.' },
-		{ id: 'drawGuess', label: 'Gæt tegningen', hint: 'Det andet hold ser hver tegning og gætter dyret. Du dømmer rigtigt/forkert.' },
-		{ id: 'drawRate', label: 'Mors bedømmelse', hint: 'Alle har tegnet samme dyr — kår de tre bedste tegninger.' }
+		{ id: 'drawGuess', label: 'Gæt tegningen', hint: 'Det andet hold ser hver tegning og gætter motivet. Du dømmer rigtigt/forkert.' },
+		{ id: 'drawRate', label: 'Mors bedømmelse', hint: 'Alle har tegnet det samme motiv — kår de tre bedste tegninger.' }
 	];
 
 	let roundType = $state<GameRound>('match');
@@ -246,7 +246,7 @@
 				<p class="status">
 					{#if roundType === 'drawRate'}
 						{#if galleryDrawers.length === 0}
-							⚠️ Ingen har tegnet dette dyr endnu.
+							⚠️ Ingen har tegnet dette motiv endnu.
 						{:else}
 							{galleryDrawers.length} tegninger klar til bedømmelse{alreadyRated ? ' · allerede bedømt (kan rettes)' : ''}.
 						{/if}
@@ -296,7 +296,7 @@
 				<b>{guessingTeam.name}</b>
 				{#if activeType === 'who'}— gæt hvem på {authoringTeam.name}, der skrev hvert svar.
 				{:else if activeType === 'what'}— gæt hvad hver person på {authoringTeam.name} svarede.
-				{:else}— gæt hvilket dyr hver tegning fra {authoringTeam.name} forestiller.{/if}
+				{:else}— gæt hvad hver tegning fra {authoringTeam.name} forestiller.{/if}
 			</div>
 			<p class="qtext">“{question.text}”</p>
 

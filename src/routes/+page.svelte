@@ -55,7 +55,7 @@
 			<p>{next.blurb}</p>
 			{#if next.progress && next.progress.total > 0}
 				<div class="next-progress">
-					<div class="bar"><span style="width:{(next.progress.done / next.progress.total) * 100}%"></span></div>
+					<div class="progress"><span style="width:{(next.progress.done / next.progress.total) * 100}%"></span></div>
 					<span class="frac">{next.progress.done}/{next.progress.total}</span>
 				</div>
 			{/if}
@@ -140,11 +140,11 @@
 		gap: 0.7rem;
 		margin-top: 0.9rem;
 	}
-	.next-progress .bar {
+	.next-progress .progress {
 		flex: 1;
 		background: rgba(255, 255, 255, 0.28);
 	}
-	.next-progress .bar > span {
+	.next-progress .progress > span {
 		background: #fff;
 	}
 	.frac {

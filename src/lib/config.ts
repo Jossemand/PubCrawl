@@ -16,44 +16,31 @@ export const config = {
 	/** Default canvas seconds per mode (a question can override via its own `seconds`). */
 	drawingSeconds: { fixed: 15, random: 60 },
 
-	/** Simple animals — suggestions for 'fixed' (mom-rated) drawing questions. */
-	animals: [
-		'Elefant',
-		'Giraf',
-		'Pingvin',
-		'Krokodille',
-		'Kænguru',
-		'Næsehorn',
-		'Flodhest',
-		'Egern',
-		'Pindsvin',
-		'Ugle',
-		'Hjort',
-		'Sæl',
-		'Blæksprutte',
-		'Flamingo',
-		'Dovendyr',
-		'Hummer'
-	],
+	/**
+	 * The one motif everyone draws in the mom-judged round. Everybody gets the
+	 * same thing — that's the whole point of the round — so there is exactly
+	 * one of these. Keep it simple: 15 seconds is not long.
+	 */
+	fixedMotif: 'Elefant',
 
-	/** Harder scenes for 'random' (guess-the-drawing) questions — an animal doing something. */
-	drawingPrompts: [
-		'En elefant på rulleskøjter',
-		'En giraf der spiller guitar',
-		'En pingvin der dyrker yoga',
-		'En krokodille til tandlægen',
-		'En kænguru der bokser med en kænguru',
-		'En hund der kører på skateboard',
-		'En kat der bager en lagkage',
-		'En bjørn der fisker i en sø',
-		'En ugle der læser avis med briller',
-		'En abe der jonglerer med bananer',
-		'En flodhest på ballettåspids',
-		'En egern der løfter vægte',
-		'En frø der spiller fodbold',
-		'En hest der maler et selvportræt',
-		'En kanin der hopper i faldskærm',
-		'En sæl der balancerer en bold på næsen til disco'
+	/**
+	 * The 60-second motifs, one per person, for the round where the other team
+	 * guesses what the drawing is. Each player is pinned to their own motif so
+	 * you know in advance who draws what — nothing is rolled at random.
+	 *
+	 * `contestantId` refers to the ids in mockData.ts / Opsætning (c1, c2, …),
+	 * not to names, so renaming a player in Opsætning keeps their motif. Add a
+	 * line when you add a player; anyone without one gets an empty canvas and
+	 * no prompt.
+	 */
+	randomMotifs: [
+		{ contestantId: 'c1', motif: 'CJ der får en flad på floor i Kolding' },
+		{ contestantId: 'c2', motif: 'Emil der knækker sig foran Frederiksberg Rådhus' },
+		{ contestantId: 'c3', motif: 'Joes der kommer med blomster til damen kl. 6 om morgenen' },
+		{ contestantId: 'c6', motif: 'Gustav der bunder en hvidvin til kevle' },
+		{ contestantId: 'c5', motif: 'Emil der knækker sig på gulvet på LA bar' },
+		{ contestantId: 'c4', motif: "Gustav der knækker sig på Joes' ben på LA bar" },
+		{ contestantId: 'c7', motif: 'Joes der fortærer taquitos i toget hjem fra Kolding' }
 	],
 
 	/**
