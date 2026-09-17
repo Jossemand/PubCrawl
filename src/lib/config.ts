@@ -14,7 +14,7 @@ export const config = {
 	},
 
 	/** Default canvas seconds per mode (a question can override via its own `seconds`). */
-	drawingSeconds: { fixed: 15, random: 60 },
+	drawingSeconds: { fixed: 10, random: 30 },
 
 	/**
 	 * The one motif everyone draws in the mom-judged round. Everybody gets the
@@ -34,13 +34,13 @@ export const config = {
 	 * no prompt.
 	 */
 	randomMotifs: [
-		{ contestantId: 'c1', motif: 'CJ der får en flad på floor i Kolding' },
+		{ contestantId: 'c3', motif: 'CJ der får en flad på floor i Kolding' },
 		{ contestantId: 'c2', motif: 'Emil der knækker sig foran Frederiksberg Rådhus' },
-		{ contestantId: 'c3', motif: 'Joes der kommer med blomster til damen kl. 6 om morgenen' },
+		{ contestantId: 'c1', motif: 'Joes der kommer med blomster til damen kl. 6 om morgenen' },
 		{ contestantId: 'c6', motif: 'Gustav der bunder en hvidvin til kevle' },
-		{ contestantId: 'c5', motif: 'Emil der knækker sig på gulvet på LA bar' },
-		{ contestantId: 'c4', motif: "Gustav der knækker sig på Joes' ben på LA bar" },
-		{ contestantId: 'c7', motif: 'Joes der fortærer taquitos i toget hjem fra Kolding' }
+		{ contestantId: 'c7', motif: 'Emil der knækker sig på gulvet på LA bar' },
+		{ contestantId: 'c5', motif: "Gustav der knækker sig på Joes' ben på LA bar" },
+		{ contestantId: 'c4', motif: 'Joes der fortærer taquitos i toget hjem fra Kolding' }
 	],
 
 	/**
