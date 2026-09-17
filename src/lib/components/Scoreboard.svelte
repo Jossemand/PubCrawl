@@ -36,9 +36,13 @@
 	.team {
 		border: 1px solid var(--border);
 		border-left: 5px solid var(--c);
-		border-radius: 12px;
-		padding: 0.75rem 1rem;
+		border-radius: var(--radius-sm);
+		padding: 0.7rem 0.95rem;
 		background: var(--bg-elevated);
+	}
+	/* The leader gets a touch more weight than the rest. */
+	.team:first-child .total {
+		color: var(--c);
 	}
 	.head {
 		display: flex;
@@ -63,8 +67,9 @@
 	}
 	.breakdown {
 		display: flex;
-		gap: 0.85rem;
-		font-size: 0.8rem;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+		font-size: 0.78rem;
 		margin-top: 0.3rem;
 	}
 	.compact .total {

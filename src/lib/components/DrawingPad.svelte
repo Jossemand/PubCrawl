@@ -157,7 +157,7 @@
 		width: 100%;
 		max-width: 100%;
 		aspect-ratio: 640 / 420;
-		background: #fff;
+		background: #fff; /* the drawing surface itself is always white */
 		border: 2px solid var(--border);
 		border-radius: 10px;
 		touch-action: none;

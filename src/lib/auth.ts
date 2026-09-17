@@ -8,6 +8,13 @@ export interface Session {
 	username: string;
 	role: Account['role'];
 	contestantId?: string;
+	/**
+	 * Opaque session token from the backend (`app_login`). Every Supabase call
+	 * carries it, and the database decides from it what the caller may see —
+	 * so a tampered-with session in localStorage buys nothing but a broken UI.
+	 * Absent in local (no-backend) mode.
+	 */
+	token?: string;
 }
 
 /** Returns a session if the credentials match an account, otherwise null. */

@@ -1,6 +1,10 @@
 // Supabase data layer. All access goes through SECURITY DEFINER RPCs (see
-// supabase/rpc.sql), which bypass RLS and keep passwords server-side. This
-// avoids publishable-key/role issues with direct table access.
+// supabase/rpc.sql), which are the only way in: the anon key has no privileges
+// on the tables themselves.
+//
+// Every call carries the session token minted by `app_login`. The database
+// derives the caller's role from that token, so what comes back is already
+// scoped — a contestant is handed their own answers and nothing else.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Account, Answer, GameState } from '../types';
@@ -19,8 +23,23 @@ function splitConfig(state: GameState): ConfigData {
 	return config;
 }
 
+/** What `app_load` returns, once the database has scoped it to the caller. */
+interface LoadPayload {
+	role: 'anon' | Account['role'];
+	config: ConfigData | null;
+	answers: unknown;
+	accounts: unknown;
+	needsSeed: boolean;
+}
+
+export interface LoadResult {
+	state: GameState;
+	/** 'anon' means the token was missing or expired — the caller must log in. */
+	role: LoadPayload['role'];
+}
+
 export interface GameRepo {
-	loadAll(): Promise<GameState>;
+	loadAll(): Promise<LoadResult>;
 	saveConfig(state: GameState): Promise<void>;
 	upsertAnswer(answer: Answer): Promise<void>;
 	deleteAnswer(questionId: string, contestantId: string): Promise<void>;
@@ -29,10 +48,22 @@ export interface GameRepo {
 	deleteAccountForContestant(contestantId: string): Promise<void>;
 	resetAll(state: GameState): Promise<void>;
 	login(username: string, password: string): Promise<Session | null>;
+	logout(): Promise<void>;
 }
 
-export function createSupabaseRepo(sb: SupabaseClient): GameRepo {
-	async function call<T = unknown>(fn: string, args?: Record<string, unknown>): Promise<T> {
+/**
+ * @param getToken reads the current session token at call time (the session
+ *   store is created after the repo, and the token changes on login/logout).
+ */
+export function createSupabaseRepo(sb: SupabaseClient, getToken: () => string | null): GameRepo {
+	async function call<T = unknown>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
+		const { data, error } = await sb.rpc(fn, { p_token: getToken(), ...args });
+		if (error) throw error;
+		return data as T;
+	}
+
+	/** Calls that need no session (login, first-run seeding). */
+	async function callAnon<T = unknown>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
 		const { data, error } = await sb.rpc(fn, args);
 		if (error) throw error;
 		return data as T;
@@ -90,31 +121,29 @@ export function createSupabaseRepo(sb: SupabaseClient): GameRepo {
 		resetAll,
 
 		async loadAll() {
-			const data = await call<{ config: ConfigData | null; answers: unknown; accounts: unknown }>('app_load');
+			let data = await call<LoadPayload>('app_load');
 
-			// First run on an empty project: write the seed config + accounts.
-			// Never wipes existing data (that's an explicit resetAll).
-			let config = data?.config ?? null;
-			if (!config) {
+			// First run against an empty project: seed teams, questions and the
+			// admin login so there is someone to log in as. The database only
+			// honours this while the accounts table is empty, so it can never
+			// overwrite a live game.
+			if (data?.needsSeed) {
 				const seed = clone(initialState);
-				await saveConfig(seed);
-				for (const acc of seed.accounts) await setAccount(acc);
-				config = splitConfig(seed);
+				await callAnon('app_bootstrap', {
+					p_config: splitConfig(seed),
+					p_accounts: seed.accounts
+				});
+				data = await call<LoadPayload>('app_load');
 			}
 
-			const answers = mapAnswers(data?.answers);
-			const accounts = mapAccounts(data?.accounts);
+			const role = data?.role ?? 'anon';
+			const state = {
+				...(data?.config ?? splitConfig(clone(initialState))),
+				answers: mapAnswers(data?.answers),
+				accounts: mapAccounts(data?.accounts)
+			} as GameState;
 
-			// Self-heal: ensure an admin login exists.
-			if (!accounts.some((a) => a.role === 'admin')) {
-				const adminSeeds = clone(initialState).accounts.filter((a) => a.role === 'admin');
-				for (const acc of adminSeeds) {
-					await setAccount(acc).catch((e) => console.error('[supabase] seed admin failed:', e));
-					accounts.push({ ...acc, password: '' });
-				}
-			}
-
-			return { ...config, answers, accounts } as GameState;
+			return { state, role };
 		},
 
 		async deleteAnswer(questionId, contestantId) {
@@ -134,13 +163,23 @@ export function createSupabaseRepo(sb: SupabaseClient): GameRepo {
 		},
 
 		async login(username, password) {
-			const data = await call<Array<{ username: string; role: string; contestant_id: string | null }>>(
-				'login',
-				{ p_username: username, p_password: password }
-			);
-			const row = Array.isArray(data) ? data[0] : null;
-			if (!row) return null;
-			return { username: row.username, role: row.role as Account['role'], contestantId: row.contestant_id ?? undefined };
+			const row = await callAnon<{
+				token: string;
+				username: string;
+				role: Account['role'];
+				contestantId: string | null;
+			} | null>('app_login', { p_username: username, p_password: password });
+			if (!row?.token) return null;
+			return {
+				token: row.token,
+				username: row.username,
+				role: row.role,
+				contestantId: row.contestantId ?? undefined
+			};
+		},
+
+		async logout() {
+			if (getToken()) await call('app_logout');
 		}
 	};
 }

@@ -192,9 +192,13 @@
 	}
 </script>
 
-<section class="stack">
+<div class="stack">
+	<header class="page-head">
+		<h1>Live-spil</h1>
+		<p class="muted">Én runde pr. stop. Vælg rundetype, kør den, og appen giver point.</p>
+	</header>
+
 	<div class="card">
-		<h2>Live-spil</h2>
 
 		{#if phase === 'setup'}
 			<div class="types">
@@ -414,12 +418,18 @@
 	</div>
 
 	<div class="card">
-		<h3>Stilling</h3>
+		<div class="card-title"><h3>Stilling</h3></div>
 		<Scoreboard compact />
 	</div>
-</section>
+</div>
 
 <style>
+	.page-head h1 {
+		margin: 0 0 0.2rem;
+	}
+	.page-head p {
+		margin: 0;
+	}
 	.types {
 		display: flex;
 		gap: 0.4rem;
@@ -427,15 +437,20 @@
 		margin-bottom: 0.75rem;
 	}
 	.type {
-		background: var(--bg-elevated);
-		border: 1px solid var(--border);
-		color: var(--text);
+		background: var(--bg-card);
+		border: 1px solid var(--border-strong);
+		color: var(--text-dim);
 		font-weight: 600;
-		font-size: 0.9rem;
+		font-size: 0.88rem;
+		padding: 0.45rem 0.85rem;
+	}
+	.type:hover:not(:disabled) {
+		background: var(--bg-elevated);
+		color: var(--text);
 	}
 	.type.active {
 		background: var(--accent);
-		color: #2a1c00;
+		color: var(--on-strong);
 		border-color: var(--accent);
 	}
 	.grid2 {
@@ -452,14 +467,15 @@
 	}
 	.banner {
 		background: var(--accent-soft);
-		border: 1px solid var(--border);
-		border-radius: 10px;
+		border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+		border-radius: var(--radius-sm);
 		padding: 0.75rem 1rem;
 		margin-bottom: 0.5rem;
 	}
 	.banner.result {
-		background: #1c2a20;
+		background: var(--good-soft);
 		border-color: var(--good);
+		font-size: 1.05rem;
 	}
 	.qtext {
 		font-size: 1.15rem;
@@ -473,8 +489,8 @@
 		align-items: center;
 		background: var(--bg-elevated);
 		border: 1px solid var(--border);
-		border-radius: 10px;
-		padding: 0.6rem 0.75rem;
+		border-radius: var(--radius-sm);
+		padding: 0.7rem 0.85rem;
 	}
 	.slot .ans {
 		font-style: italic;
@@ -500,13 +516,15 @@
 		gap: 0.5rem;
 	}
 	.controls .sel {
-		outline: 2px solid var(--text);
+		box-shadow: 0 0 0 2px var(--text);
 	}
 	.slot.ok {
 		border-color: var(--good);
+		background: var(--good-soft);
 	}
 	.slot.no {
 		border-color: var(--bad);
+		background: var(--bad-soft);
 	}
 	.verdict {
 		margin-top: 0.3rem;
@@ -531,12 +549,13 @@
 	}
 	.draw-card {
 		border: 1px solid var(--border);
-		border-radius: 10px;
+		border-radius: var(--radius-sm);
 		padding: 0.5rem;
 		background: var(--bg-elevated);
 	}
 	.draw-card.ranked {
-		border-color: var(--accent);
+		border-color: var(--highlight);
+		background: var(--highlight-soft);
 	}
 	.draw-card .drawing {
 		max-width: 100%;
@@ -560,6 +579,7 @@
 		flex: 1;
 		background: var(--bg-card);
 		border: 1px solid var(--border);
+		color: var(--text);
 		padding: 0.3rem;
 		filter: grayscale(0.7);
 		opacity: 0.7;
@@ -567,8 +587,8 @@
 	.medal.sel {
 		filter: none;
 		opacity: 1;
-		border-color: var(--accent);
-		background: var(--accent-soft);
+		border-color: var(--highlight);
+		background: var(--bg-card);
 	}
 	@media (max-width: 560px) {
 		.grid2,

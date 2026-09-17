@@ -56,8 +56,16 @@ export const config = {
 		'En sæl der balancerer en bold på næsen til disco'
 	],
 
+	/**
+	 * Date of the crawl itself, as YYYY-MM-DD. Drives the countdown and the
+	 * final step of the timeline. Leave it empty to hide both.
+	 */
+	eventDate: '2026-10-17',
+
 	/** localStorage key under which the whole game state is saved. */
 	storageKey: 'pubcrawl-state-v1',
 	/** localStorage key for the current login session. */
-	sessionKey: 'pubcrawl-session-v1'
+	sessionKey: 'pubcrawl-session-v1',
+	/** localStorage key remembering that a player has read their secret task. */
+	taskSeenKey: 'pubcrawl-task-seen-v1'
 } as const;

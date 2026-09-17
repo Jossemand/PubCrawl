@@ -9,7 +9,7 @@ for local development). It switches to Supabase automatically once the two
 
 ## 1. Create the Supabase project
 1. Sign up at [supabase.com](https://supabase.com) and create a new project (free tier). Pick a region near you.
-2. In the dashboard go to **SQL Editor → New query**, paste the contents of [`supabase/schema.sql`](supabase/schema.sql), and **Run**. This creates the tables, the security policies, and the `login()` function.
+2. In the dashboard go to **SQL Editor → New query** and run **both** files, in this order: first [`supabase/schema.sql`](supabase/schema.sql) (tables, and the lockdown that puts every table out of reach of the anon key), then [`supabase/rpc.sql`](supabase/rpc.sql) (the functions the app actually calls). Both are safe to re-run and never delete data.
 3. Go to **Project Settings → API** and copy:
    - **Project URL** → `PUBLIC_SUPABASE_URL`
    - **anon public** key → `PUBLIC_SUPABASE_ANON_KEY`
@@ -52,12 +52,37 @@ secrets** (GitHub → Settings → Secrets and variables → Actions):
 (Belt-and-suspenders: also click **Restore** in the Supabase dashboard the day before the crawl, just in case.)
 
 ## How data is stored
-- **`game_config`** — one JSON row with teams/contestants/questions/tasks/rounds/ratings/bonus. Only you (the taskmaster) write this, so a single row is safe.
+- **`game_config`** — one JSON row with teams/contestants/questions/tasks/rounds/ratings/bonus. Only the taskmaster writes it, so a single row is safe.
 - **`answers`** — one row per (question, contestant). Players write their own, so simultaneous submissions never clobber each other. "Lås op" in Opsætning deletes the row → the player's canvas reopens.
-- **`accounts`** — logins. Passwords are **never** sent to the browser: login goes through the `login()` SQL function, and the client only ever reads usernames/roles.
+- **`accounts`** — logins. Passwords are never sent to the browser.
+- **`sessions`** — one row per logged-in device, holding the token the app sends with every call.
 
-## Security notes (please read)
-This is built for a friendly party game, not a bank. Current posture:
-- **Passwords are protected** (write-only from the client, checked server-side).
-- **Answers are readable with the anon key.** A technically-minded contestant could, in theory, query other people's answers/drawings before the crawl and cheat. If you want to close that, the proper fix is real per-user auth (Supabase Auth) with row-level policies, or routing reads through credential-checked SQL functions. Ask and I can implement it.
-- **Drawings** are stored as PNG data URLs in the `answers.value` column. Fine for ~10 friends; for many more, move them to Supabase Storage and keep only a URL.
+## Security model
+The anon key ships inside the frontend bundle, so anyone who opens the app has
+it. The database is therefore built so that the anon key on its own can do
+**nothing**:
+
+- **No table is reachable over the REST API.** `anon` and `authenticated` have
+  no privileges on `game_config`, `answers`, `accounts` or `sessions`, and RLS
+  is on with no policies. `GET /rest/v1/answers` returns nothing to anybody.
+- **Everything goes through the functions in `supabase/rpc.sql`**, which run as
+  the owner and take a session token minted by `app_login`.
+- **The database decides what each session may see.** A contestant is served
+  their own answers and their own secret task; the taskmaster is served the
+  whole game. A contestant cannot read another player's answer *because the
+  server never sends it* — not because the UI hides it.
+- **Writes are scoped the same way.** A contestant can only write their own
+  answer row, and cannot overwrite a drawing once it is locked. Everything else
+  (config, accounts, resets) is taskmaster-only.
+- **Passwords never leave the server.** Login is checked inside `app_login`;
+  the client only ever receives usernames, roles and a token.
+- **Tampering with the stored session** (editing `localStorage` to say
+  `role: admin`) unlocks nothing: the token is what the server checks, and it
+  is the server's own record of who you are.
+
+Remaining rough edges, fine for a party game among friends:
+- Passwords are stored in plain text (they are throwaway 6-character codes, and
+  the taskmaster needs to read them out to hand them over).
+- Sessions last 30 days and are not tied to a device.
+- Drawings are stored as PNG data URLs in `answers.value`. Fine for ~10 friends;
+  for many more, move them to Supabase Storage and keep only a URL.

@@ -14,10 +14,15 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
+      # Tables are not reachable with the anon key (see SUPABASE_SETUP.md), so
+      # ping the one RPC that answers without a session. It returns no game
+      # data — just enough to count as activity.
       - name: Ping the database
         run: |
-          curl -fsS \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/game_config?select=id&limit=1" \
+          curl -fsS -X POST \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/app_load" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
             && echo "Supabase pinged OK"

@@ -241,7 +241,15 @@
 	}
 </script>
 
-<section class="stack">
+<div class="stack">
+	<header class="page-head">
+		<h1>Opsætning</h1>
+		<p class="muted">
+			Alt om spillet bor her: hold, deltagere, spørgsmål, hemmelige opgaver og logins. Ændringer
+			gemmes med det samme.
+		</p>
+	</header>
+
 	<div class="card">
 		<h2>Hold</h2>
 		{#each $game.teams as t (t.id)}
@@ -480,17 +488,31 @@
 			<button onclick={importJson} disabled={!importText.trim()} style="margin-top:0.5rem">Importér &amp; erstat</button>
 		</details>
 	</div>
-</section>
+</div>
 
 <style>
+	/* Inputs default to width:100%, which makes every field in a .row wrap onto
+	   its own line. In this dense editor they should share the line instead. */
+	.row > :global(input:not([type='color'])),
+	.row > :global(select) {
+		flex: 1 1 11rem;
+		width: auto;
+	}
+	.page-head h1 {
+		margin: 0 0 0.2rem;
+	}
+	.page-head p {
+		margin: 0;
+		max-width: 60ch;
+	}
 	.qblock {
 		border-top: 1px solid var(--border);
 		padding: 0.6rem 0;
 	}
 	.note {
 		background: var(--accent-soft);
-		border: 1px solid var(--border);
-		border-radius: 10px;
+		border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+		border-radius: var(--radius-sm);
 		padding: 0.6rem 0.85rem;
 		font-size: 0.9rem;
 	}
@@ -507,9 +529,9 @@
 		min-width: 110px;
 	}
 	.cred {
-		background: var(--bg-elevated);
+		background: var(--bg-sunken);
 		border: 1px solid var(--border);
-		border-radius: 8px;
+		border-radius: 7px;
 		padding: 0.2rem 0.55rem;
 		font-family: ui-monospace, Menlo, Consolas, monospace;
 	}

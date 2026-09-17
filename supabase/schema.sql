@@ -1,6 +1,12 @@
 -- Pub Crawl Taskmaster — Supabase schema
 -- Run this once in your Supabase project: SQL Editor → paste → Run.
--- Safe to re-run (uses "if not exists" / "or replace").
+-- Safe to re-run (uses "if not exists" / "or replace"), and never deletes data.
+-- Run supabase/rpc.sql AFTER this file — it defines every function the app calls.
+--
+-- Security model: the browser ships the anon key, so the anon key must be able
+-- to do *nothing* on its own. No table is reachable over the REST API; all
+-- access goes through the SECURITY DEFINER functions in rpc.sql, each of which
+-- takes a session token and decides what that session may see or change.
 
 -- =========================================================================
 -- Tables
@@ -35,53 +41,49 @@ create table if not exists accounts (
 	contestant_id text
 );
 
+-- Login sessions. app_login() mints a token; every other function takes that
+-- token and derives the caller's role from this table. Nothing is trusted from
+-- the client except the opaque token itself.
+create table if not exists sessions (
+	token uuid primary key default gen_random_uuid(),
+	username text not null,
+	role text not null,
+	contestant_id text,
+	created_at timestamptz not null default now(),
+	last_seen_at timestamptz not null default now()
+);
+
+create index if not exists sessions_last_seen_idx on sessions (last_seen_at);
+
 -- =========================================================================
--- Row Level Security
+-- Lock the tables away from the API roles
 -- =========================================================================
+-- RLS stays on with NO policies: for anon/authenticated that is deny-all, even
+-- if a grant is ever re-added by accident. Belt and braces, because the whole
+-- point is that a curious contestant with the anon key cannot read answers.
 
 alter table game_config enable row level security;
 alter table answers enable row level security;
 alter table accounts enable row level security;
+alter table sessions enable row level security;
 
--- game_config + answers: open to the browser. Policies omit a role so they
--- apply to PUBLIC (all roles) — this avoids anon-vs-publishable-key mismatches.
--- This is a friends' party game; see SUPABASE_SETUP.md to lock it down further.
+-- Drop the old permissive policies from the pre-RPC design, if still present.
 drop policy if exists "config_all" on game_config;
-create policy "config_all" on game_config for all using (true) with check (true);
-
 drop policy if exists "answers_all" on answers;
-create policy "answers_all" on answers for all using (true) with check (true);
-
--- accounts: the browser may create/update/delete logins, but NOT read them
--- (no SELECT policy = passwords are never returned to the client).
 drop policy if exists "accounts_insert" on accounts;
-create policy "accounts_insert" on accounts for insert with check (true);
 drop policy if exists "accounts_update" on accounts;
-create policy "accounts_update" on accounts for update using (true) with check (true);
 drop policy if exists "accounts_delete" on accounts;
-create policy "accounts_delete" on accounts for delete using (true);
 
--- A safe view exposing only non-secret account columns (for the Setup screen
--- and the contestant↔account mapping). Runs with owner rights, so it can read
--- the table even though there is no SELECT policy on accounts.
-create or replace view accounts_public as
-	select username, role, contestant_id from accounts;
-grant select on accounts_public to anon, authenticated;
+-- No table privileges for the API roles at all. SECURITY DEFINER functions run
+-- as the owner, so the app keeps working; direct /rest/v1/<table> calls do not.
+revoke all on game_config, answers, accounts, sessions from anon, authenticated, public;
 
--- =========================================================================
--- Login function — checks credentials server-side, returns no password.
--- =========================================================================
-create or replace function login(p_username text, p_password text)
-returns table (username text, role text, contestant_id text)
-language sql
-security definer
-set search_path = public
-as $$
-	select a.username, a.role, a.contestant_id
-	from accounts a
-	where lower(a.username) = lower(p_username)
-	  and a.password = p_password
-	limit 1;
-$$;
+-- The old read-only view of accounts is obsolete (app_load returns the same
+-- columns, admin-only) and it leaked usernames to anyone with the anon key.
+drop view if exists accounts_public;
 
-grant execute on function login(text, text) to anon;
+-- The old login() returned no session token; app_login() in rpc.sql replaces it.
+drop function if exists login(text, text);
+
+-- Anon may not invent its own functions or objects in the public schema.
+revoke create on schema public from anon, authenticated, public;

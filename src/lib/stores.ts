@@ -75,17 +75,49 @@ export const game = createGameStore();
 // purely on localStorage (current behaviour). When present, reads load from
 // Supabase on startup and writes are mirrored there.
 
-const repo: GameRepo | null = browser && supabaseConfigured && supabase ? createSupabaseRepo(supabase) : null;
+/**
+ * The current session token, read straight from storage at startup so the very
+ * first load is already authenticated. Kept in sync by the session store below;
+ * the repo reads it lazily on every call, which is why this lives up here.
+ */
+let authToken: string | null = browser
+	? (storage.load<Session | null>(config.sessionKey, null)?.token ?? null)
+	: null;
+
+const repo: GameRepo | null =
+	browser && supabaseConfigured && supabase
+		? createSupabaseRepo(supabase, () => authToken)
+		: null;
 
 export const usingSupabase = !!repo;
 /** False while the initial Supabase load is in flight; always true in local mode. */
 export const ready = writable<boolean>(!repo);
 
+/**
+ * Pull the backend's view of the game for the current session. The database
+ * scopes the payload to the caller, so this returns a contestant's own answers
+ * and the whole game for the taskmaster. Returns the role it was served as.
+ */
+async function loadFromBackend(): Promise<'anon' | Account['role'] | null> {
+	if (!repo) return null;
+	try {
+		const { state, role } = await repo.loadAll();
+		game.set(normalize(state));
+		return role;
+	} catch (e) {
+		console.error('[supabase] load failed, using local cache:', e);
+		return null;
+	}
+}
+
 if (repo) {
-	repo
-		.loadAll()
-		.then((state) => game.set(normalize(state)))
-		.catch((e) => console.error('[supabase] initial load failed, using local cache:', e))
+	loadFromBackend()
+		.then((role) => {
+			// The stored token was rejected (expired, or the game was reset) —
+			// drop the stale session so the user lands on the login screen
+			// instead of an empty-looking app.
+			if (role === 'anon') sessionExpired();
+		})
 		.finally(() => ready.set(true));
 }
 
@@ -354,13 +386,33 @@ function createSessionStore() {
 	const initial = browser ? storage.load<Session | null>(config.sessionKey, null) : null;
 	const store = writable<Session | null>(initial);
 	if (browser) {
-		store.subscribe((value) => storage.save(config.sessionKey, value));
+		// The token is what every backend call is authorised by, so keep the
+		// module-level copy in step with the store on every change.
+		store.subscribe((value) => {
+			authToken = value?.token ?? null;
+			storage.save(config.sessionKey, value);
+		});
 	}
+
+	/**
+	 * Drop the local copy of the game. Only when there's a backend to reload
+	 * from — in local mode this store IS the game, so wiping it would destroy
+	 * the only copy. On a shared taskmaster device this stops the next person
+	 * to log in from finding everyone's answers sitting in localStorage.
+	 */
+	function clearCachedGame() {
+		if (!repo) return;
+		game.set(clone(initialState));
+		storage.clear(config.storageKey);
+	}
+
 	return {
 		subscribe: store.subscribe,
 		/**
-		 * Returns true on success. Uses the Supabase `login` RPC when configured
-		 * (passwords never reach the browser); otherwise checks local accounts.
+		 * Returns true on success. Uses the Supabase `app_login` RPC when
+		 * configured (passwords never reach the browser); otherwise checks the
+		 * local accounts. On success the game is re-loaded, because what the
+		 * backend will hand over depends on who is now logged in.
 		 */
 		async login(username: string, password: string): Promise<boolean> {
 			const sess = repo
@@ -369,19 +421,50 @@ function createSessionStore() {
 						return null;
 					})
 				: authenticate(get(game), username, password);
-			if (sess) {
-				store.set(sess);
-				return true;
-			}
-			return false;
+			if (!sess) return false;
+			store.set(sess);
+			await loadFromBackend();
+			return true;
 		},
 		logout() {
+			repo?.logout().catch(logErr('logout')); // revoke the token server-side
 			store.set(null);
+			clearCachedGame();
+		},
+		/** Session rejected by the backend: clear it without calling logout. */
+		expired() {
+			store.set(null);
+			clearCachedGame();
 		}
 	};
 }
 
 export const session = createSessionStore();
+
+/** Used by the initial load when the stored token is no longer valid. */
+function sessionExpired() {
+	session.expired();
+}
+
+// ---- "I've read my secret task" -----------------------------------------
+// Per-device, per-player marker so the timeline can tick that step off. It is
+// a convenience, not a fact about the world, so localStorage is the right home.
+
+function createTaskSeenStore() {
+	const store = writable<Record<string, boolean>>(
+		browser ? storage.load<Record<string, boolean>>(config.taskSeenKey, {}) : {}
+	);
+	if (browser) store.subscribe((v) => storage.save(config.taskSeenKey, v));
+	return {
+		subscribe: store.subscribe,
+		mark(contestantId: ID | undefined) {
+			if (!contestantId) return;
+			store.update((v) => (v[contestantId] ? v : { ...v, [contestantId]: true }));
+		}
+	};
+}
+
+export const taskSeen = createTaskSeenStore();
 
 // ---- Account management (admin) -----------------------------------------
 

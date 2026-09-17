@@ -1,17 +1,90 @@
+/* =========================================================================
+   Design tokens
+   -------------------------------------------------------------------------
+   Light by default, with a dark variant that follows the OS. Everything in
+   the app is built from these — change a value here and the whole thing
+   follows. Team colours are the one exception: they come from the data.
+   ========================================================================= */
+
 :root {
-	--bg: #1a1626;
-	--bg-elevated: #241d33;
-	--bg-card: #2c2440;
-	--border: #3d3357;
-	--text: #f2edff;
-	--text-dim: #aba2c4;
-	--accent: #ffb454;
-	--accent-soft: #3a2f1a;
-	--good: #4caf72;
-	--bad: #e8643b;
-	--radius: 14px;
-	--shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-	color-scheme: dark;
+	/* Surfaces, from the page backdrop inwards. */
+	--bg: #f1f4f9;
+	--bg-card: #ffffff;
+	--bg-elevated: #f6f8fc; /* inputs, inner panels */
+	--bg-sunken: #eaeef5; /* wells, progress tracks */
+	--border: #dce3ed;
+	--border-strong: #c3ccdb;
+
+	--text: #16202f;
+	--text-dim: #5c6a7e;
+
+	/* One primary action colour; amber is the brand/highlight (beer, medals). */
+	--accent: #2563eb;
+	--accent-hover: #1d4fd7;
+	--accent-soft: #e7eeff;
+	--accent-ring: rgba(37, 99, 235, 0.35);
+	--highlight: #e08c00;
+	--highlight-soft: #fdf1dc;
+
+	--good: #17803d;
+	--good-soft: #e6f5ec;
+	--bad: #d03c3c;
+	--bad-soft: #fdeaea;
+
+	/* Text that sits on a strong colour (accent buttons, pills, team badges). */
+	--on-strong: #ffffff;
+
+	/* The "next step" hero. Its own tokens because a light accent that reads
+	   well as a button is too pale to carry white body text in dark mode. */
+	--hero-from: #2563eb;
+	--hero-to: #1d4fd7;
+	--hero-fg: #ffffff;
+	--hero-cta-fg: #1d4fd7;
+
+	--radius: 12px;
+	--radius-sm: 9px;
+	--radius-lg: 18px;
+	--shadow-sm: 0 1px 2px rgba(15, 25, 45, 0.06);
+	--shadow: 0 1px 2px rgba(15, 25, 45, 0.05), 0 10px 26px rgba(15, 25, 45, 0.07);
+	--rail-width: 288px;
+	color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #0e1420;
+		--bg-card: #161d2b;
+		--bg-elevated: #1c2434;
+		--bg-sunken: #121926;
+		--border: #2a3346;
+		--border-strong: #3b475e;
+
+		--text: #e7edf7;
+		--text-dim: #97a3b8;
+
+		--accent: #5b8cf5;
+		--accent-hover: #6f9bf8;
+		--accent-soft: #1a2540;
+		--accent-ring: rgba(91, 140, 245, 0.4);
+		--highlight: #f0ad3c;
+		--highlight-soft: #2c2415;
+
+		--good: #4ec27d;
+		--good-soft: #15291d;
+		--bad: #ef6b6b;
+		--bad-soft: #2b1718;
+
+		--on-strong: #0b1220;
+
+		--hero-from: #1e3a8a;
+		--hero-to: #16306b;
+		--hero-fg: #ffffff;
+		--hero-cta-fg: #1e3a8a;
+
+		--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+		--shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 10px 26px rgba(0, 0, 0, 0.35);
+		color-scheme: dark;
+	}
 }
 
 * {
@@ -25,24 +98,40 @@ body {
 }
 
 body {
-	background: radial-gradient(1200px 600px at 50% -10%, #2a2140 0%, var(--bg) 60%);
+	background: var(--bg);
 	color: var(--text);
-	font-family: 'Trebuchet MS', 'Segoe UI', system-ui, -apple-system, sans-serif;
+	font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 	min-height: 100vh;
-	line-height: 1.5;
+	line-height: 1.55;
+	-webkit-font-smoothing: antialiased;
 }
 
 a {
 	color: var(--accent);
 	text-decoration: none;
 }
+a:hover {
+	text-decoration: underline;
+}
 
 h1,
 h2,
 h3 {
 	margin: 0 0 0.5rem;
-	line-height: 1.2;
+	line-height: 1.25;
+	letter-spacing: -0.015em;
 }
+h1 {
+	font-size: 1.6rem;
+}
+h2 {
+	font-size: 1.25rem;
+}
+h3 {
+	font-size: 1.05rem;
+}
+
+/* ---- Controls ---------------------------------------------------------- */
 
 button,
 select,
@@ -54,19 +143,27 @@ textarea {
 
 button {
 	cursor: pointer;
-	border: none;
-	border-radius: 10px;
-	padding: 0.6rem 1rem;
+	border: 1px solid transparent;
+	border-radius: var(--radius-sm);
+	padding: 0.55rem 1rem;
 	background: var(--accent);
-	color: #2a1c00;
-	font-weight: 700;
-	transition: transform 0.05s ease, filter 0.15s ease;
+	color: var(--on-strong);
+	font-weight: 600;
+	transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
 }
-button:hover {
-	filter: brightness(1.07);
+button:hover:not(:disabled) {
+	background: var(--accent-hover);
 }
-button:active {
+button:active:not(:disabled) {
 	transform: translateY(1px);
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 3px var(--accent-ring);
 }
 button:disabled {
 	opacity: 0.45;
@@ -74,54 +171,122 @@ button:disabled {
 }
 
 button.ghost {
-	background: transparent;
-	border: 1px solid var(--border);
+	background: var(--bg-card);
+	border-color: var(--border-strong);
 	color: var(--text);
-	font-weight: 600;
+}
+button.ghost:hover:not(:disabled) {
+	background: var(--bg-elevated);
 }
 
 button.danger {
 	background: var(--bad);
 	color: #fff;
 }
+button.danger:hover:not(:disabled) {
+	filter: brightness(1.07);
+	background: var(--bad);
+}
+
+button.subtle {
+	background: transparent;
+	color: var(--text-dim);
+	border-color: transparent;
+	padding: 0.35rem 0.6rem;
+}
+button.subtle:hover:not(:disabled) {
+	background: var(--bg-sunken);
+	color: var(--text);
+}
 
 input,
 select,
 textarea {
 	width: 100%;
-	background: var(--bg-elevated);
-	border: 1px solid var(--border);
-	border-radius: 10px;
-	padding: 0.6rem 0.75rem;
+	background: var(--bg-card);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-sm);
+	padding: 0.55rem 0.7rem;
 	outline: none;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 input:focus,
 select:focus,
 textarea:focus {
 	border-color: var(--accent);
 }
+textarea {
+	resize: vertical;
+}
+
+/* ---- Surfaces ---------------------------------------------------------- */
 
 .card {
 	background: var(--bg-card);
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
-	padding: 1.25rem;
-	box-shadow: var(--shadow);
+	padding: 1.15rem 1.25rem;
+	box-shadow: var(--shadow-sm);
+}
+
+.card-title {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	margin-bottom: 0.9rem;
+}
+.card-title h2,
+.card-title h3 {
+	margin: 0;
 }
 
 .muted {
 	color: var(--text-dim);
 }
 
+.hint {
+	color: var(--text-dim);
+	font-size: 0.9rem;
+	margin: 0.35rem 0 0;
+}
+
+/* Small strong-coloured label. Background is set inline (team colours) or via
+   a modifier class. */
 .pill {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.4rem;
-	padding: 0.2rem 0.7rem;
+	padding: 0.15rem 0.65rem;
 	border-radius: 999px;
-	font-size: 0.85rem;
+	font-size: 0.82rem;
 	font-weight: 700;
-	color: #15101f;
+	background: var(--accent);
+	color: var(--on-strong);
+	white-space: nowrap;
+}
+.pill.quiet {
+	background: var(--bg-sunken);
+	color: var(--text-dim);
+}
+.pill.good {
+	background: var(--good);
+	color: #fff;
+}
+
+/* A progress track — used by the timeline and the quiz. */
+.bar {
+	height: 7px;
+	border-radius: 999px;
+	background: var(--bg-sunken);
+	overflow: hidden;
+}
+.bar > span {
+	display: block;
+	height: 100%;
+	border-radius: 999px;
+	background: var(--accent);
+	transition: width 0.35s ease;
 }
 
 .stack {
